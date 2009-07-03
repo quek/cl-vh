@@ -1,2 +1,3 @@
 (defpackage :cl-vh
-  (:use :cl :anaphora))
+    (:use :clim :clim-lisp :esa
+          :anaphora))

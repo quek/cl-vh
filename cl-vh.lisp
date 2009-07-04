@@ -67,5 +67,8 @@
 (defmethod drei-instance-of ((frame vh))
   (esa-current-window frame))
 
+(defmethod command-for-unbound-gestures ((frame vh) gestures)
+  (command-for-unbound-gestures (esa-current-window frame) gestures))
+
 #+nil
 (run-frame-top-level (make-instance 'vh))

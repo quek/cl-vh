@@ -33,7 +33,7 @@
     :inherit-from (self-insert-table))
 
 (define-command-table edit-command-table
-    :inherit-from (movement-table))
+    :inherit-from (global-esa-table movement-table))
 
 (defclass vh-mode ()
   ((command-table :initarg :command-table :accessor command-table)))
@@ -120,8 +120,9 @@
 
 (define-command (com-append :command-table edit-command-table) ()
   (change-to-input-mode *application-frame*)
-  (execute-frame-command *application-frame*
-                         `(drei-commands::com-forward-object 1)))
+  (ignore-errors
+    (execute-frame-command *application-frame*
+                           `(drei-commands::com-forward-object 1))))
 
 (set-key `(com-edit-mode ,*numeric-argument-marker*)
          'input-command-table
@@ -151,22 +152,10 @@
 	 'movement-table
 	 '((#\t)))
 
+(set-key 'com-extended-command 'global-esa-table '((#\:)))
 
-(define-command (com-extended-command :command-table edit-command-table) ()
-  "Prompt for a command name and arguments, then run it."
-  (let ((item (handler-case
-                  (accept
-                   '(command :command-table edit-command-table)
-                   ;; this gets erased immediately anyway
-                   :prompt t :prompt-mode :raw)
-                ((or command-not-accessible command-not-present) ()
-                  (beep)
-                  (display-message "No such command")
-                  (return-from com-extended-command nil)))))
-    (execute-frame-command *application-frame* item)))
-
-(set-key 'com-extended-command 'edit-command-table '((#\:)))
-
+(defun vh ()
+  (run-frame-top-level (make-instance 'vh)))
 
 #+nil
-(run-frame-top-level (make-instance 'vh))
+(vh)

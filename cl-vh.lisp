@@ -4,6 +4,16 @@
 
 (defvar *vh-text-style* (make-text-style :fix nil nil))
 
+(defclass vh-info-pane (info-pane)
+  ()
+  (:default-initargs
+      :height 20 :max-height 20 :min-height 20
+    :display-function 'display-info
+    :incremental-redisplay t))
+
+(defun display-info (frame pane)
+  (format pane "~a ~a" frame pane))
+
 (defclass vh-buffer (drei-buffer)
   ((external-format :initform *default-external-format*
                     :accessor external-format)))
@@ -28,9 +38,12 @@
   (:panes
    (window
     (let* ((*esa-instance* *application-frame*)
-           (vh-pane (make-pane 'vh-pane :active t)))
+           (vh-pane (make-pane 'vh-pane :active t))
+           (info-pane (make-pane 'vh-info-pane :master-pane vh-pane)))
       (setf (windows *application-frame*) (list vh-pane))
-      (vertically () (scrolling () vh-pane ))))
+      (vertically ()
+        (scrolling () vh-pane )
+        info-pane)))
    (minibuffer (make-pane 'vh-minibuffer-pane))
    ;;(interactor :interactor)
    )

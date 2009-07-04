@@ -118,6 +118,11 @@
 (define-command (com-insert :command-table edit-command-table) ()
   (change-to-input-mode *application-frame*))
 
+(define-command (com-append :command-table edit-command-table) ()
+  (change-to-input-mode *application-frame*)
+  (execute-frame-command *application-frame*
+                         `(drei-commands::com-forward-object 1)))
+
 (set-key `(com-edit-mode ,*numeric-argument-marker*)
          'input-command-table
          '((:escape)))
@@ -125,6 +130,10 @@
 (set-key `(com-insert ,*numeric-argument-marker*)
 	 'edit-command-table
 	 '((#\i)))
+
+(set-key `(com-append ,*numeric-argument-marker*)
+         'edit-command-table
+         '((#\a)))
 
 (set-key `(drei-commands::com-forward-object ,*numeric-argument-marker*)
 	 'movement-table

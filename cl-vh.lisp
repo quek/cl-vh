@@ -28,6 +28,10 @@
 (defclass vh-minibuffer-pane (minibuffer-pane)
   ())
 
+
+(define-command-table vh-command-table
+    :inherit-from (global-esa-table keyboard-macro-table))
+
 (make-command-table 'input-table :errorp nil)
 
 (make-command-table 'edit-table :errorp  nil)
@@ -38,7 +42,8 @@
   (:panes
    (window
     (let* ((*esa-instance* *application-frame*)
-           (vh-pane (make-pane 'vh-pane :active t))
+           (vh-pane (make-pane 'vh-pane :active t
+                               :command-table 'vh-command-table))
            (info-pane (make-pane 'vh-info-pane :master-pane vh-pane)))
       (setf (windows *application-frame*) (list vh-pane))
       (vertically ()

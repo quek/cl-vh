@@ -12,7 +12,7 @@
     :incremental-redisplay t))
 
 (defun display-info (frame pane)
-  (format pane "~a ~a" frame pane))
+  (format pane "~a" (mode frame)))
 
 (defclass vh-buffer (drei-buffer)
   ((external-format :initform *default-external-format*
@@ -29,21 +29,34 @@
   ())
 
 
-(define-command-table vh-command-table
-    :inherit-from (global-esa-table keyboard-macro-table))
+(define-command-table input-command-table)
 
-(make-command-table 'input-table :errorp nil)
+(define-command-table edit-command-table)
 
-(make-command-table 'edit-table :errorp  nil)
+(defclass vh-mode ()
+  ((command-table :initarg :command-table :accessor command-table)))
+
+(defclass vh-input-mode (vh-mode)
+  ()
+  (:default-initargs :command-table (find-command-table 'input-command-table)))
+
+(defclass vh-edit-mode (vh-mode)
+  ()
+  (:default-initargs :command-table (find-command-table 'edit-command-table)))
+
+(defvar *input-mode* (make-instance 'vh-input-mode))
+
+(defvar *edit-mode* (make-instance 'vh-edit-mode))
+
 
 (define-application-frame vh (esa-frame-mixin standard-application-frame)
-  ()
+  ((mode :initform *edit-mode*
+         :accessor mode))
   (:menu-bar t)
   (:panes
    (window
     (let* ((*esa-instance* *application-frame*)
-           (vh-pane (make-pane 'vh-pane :active t
-                               :command-table 'vh-command-table))
+           (vh-pane (make-pane 'vh-pane :active t))
            (info-pane (make-pane 'vh-info-pane :master-pane vh-pane)))
       (setf (windows *application-frame*) (list vh-pane))
       (vertically ()
@@ -61,14 +74,68 @@
          )))
   (:top-level (esa-top-level)))
 
-(define-vh-command (com-quit :name t :menu t :keystroke (#\q :meta)) ()
-  (frame-exit *application-frame*))
+(defun change-to-input-mode (vh)
+  (setf (mode vh) *input-mode*))
+
+(defun change-to-edit-mode (vh)
+  (setf (mode vh) *edit-mode*))
+
+(defun input-mode-p (vh)
+  (eq (mode vh) *input-mode*))
+
+(defun edit-mode-p (vh)
+  (eq (mode vh) *edit-mode*))
+
+(defmethod find-applicable-command-table ((vh vh))
+  (command-table (mode vh)))
+
+(defmethod frame-command-table ((vh vh))
+  (find-applicable-command-table vh))
 
 (defmethod drei-instance-of ((frame vh))
   (esa-current-window frame))
 
+(defmethod command-table ((pane vh-pane))
+  (command-table (pane-frame pane)))
+
 (defmethod command-for-unbound-gestures ((frame vh) gestures)
-  (command-for-unbound-gestures (esa-current-window frame) gestures))
+  (if (input-mode-p frame)
+      (command-for-unbound-gestures (esa-current-window frame) gestures)))
+
+(define-command (com-edit-mode :command-table input-command-table) ()
+  (change-to-edit-mode *application-frame*))
+
+(define-command (com-quit :name t :command-table edit-command-table) ()
+  (frame-exit *application-frame*))
+
+(define-command (com-insert :command-table edit-command-table) ()
+  (change-to-input-mode *application-frame*))
+
+(set-key `(com-edit-mode ,*numeric-argument-marker*)
+         'input-command-table
+         '((:escape)))
+
+(set-key `(com-insert ,*numeric-argument-marker*)
+	 'edit-command-table
+	 '((#\i)))
+
+
+
+(define-command (com-extended-command :command-table edit-command-table) ()
+  "Prompt for a command name and arguments, then run it."
+  (let ((item (handler-case
+                  (accept
+                   '(command :command-table edit-command-table)
+                   ;; this gets erased immediately anyway
+                   :prompt t :prompt-mode :raw)
+                ((or command-not-accessible command-not-present) ()
+                  (beep)
+                  (display-message "No such command")
+                  (return-from com-extended-command nil)))))
+    (execute-frame-command *application-frame* item)))
+
+(set-key 'com-extended-command 'edit-command-table '((#\:)))
+
 
 #+nil
 (run-frame-top-level (make-instance 'vh))

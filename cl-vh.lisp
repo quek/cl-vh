@@ -29,9 +29,11 @@
   ())
 
 
-(define-command-table input-command-table)
+(define-command-table input-command-table
+    :inherit-from (self-insert-table))
 
-(define-command-table edit-command-table)
+(define-command-table edit-command-table
+    :inherit-from (movement-table))
 
 (defclass vh-mode ()
   ((command-table :initarg :command-table :accessor command-table)))
@@ -99,8 +101,13 @@
   (command-table (pane-frame pane)))
 
 (defmethod command-for-unbound-gestures ((frame vh) gestures)
+  "for self insert"
   (if (input-mode-p frame)
       (command-for-unbound-gestures (esa-current-window frame) gestures)))
+
+(set-key `(drei-commands::com-self-insert ,*numeric-argument-marker*)
+         'self-insert-table
+	 '((#\Newline)))
 
 (define-command (com-edit-mode :command-table input-command-table) ()
   (change-to-edit-mode *application-frame*))
@@ -119,6 +126,21 @@
 	 'edit-command-table
 	 '((#\i)))
 
+(set-key `(drei-commands::com-forward-object ,*numeric-argument-marker*)
+	 'movement-table
+	 '((#\n)))
+
+(set-key `(drei-commands::com-backward-object ,*numeric-argument-marker*)
+	 'movement-table
+	 '((#\d)))
+
+(set-key `(drei-commands::com-forward-line ,*numeric-argument-marker*)
+	 'movement-table
+	 '((#\h)))
+
+(set-key `(drei-commands::com-backward-line ,*numeric-argument-marker*)
+	 'movement-table
+	 '((#\t)))
 
 
 (define-command (com-extended-command :command-table edit-command-table) ()

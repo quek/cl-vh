@@ -33,7 +33,7 @@
     :inherit-from (self-insert-table))
 
 (define-command-table edit-command-table
-    :inherit-from (global-esa-table movement-table))
+    :inherit-from (global-esa-table movement-table esa-io:esa-io-table))
 
 (defclass vh-mode ()
   ((command-table :initarg :command-table :accessor command-table)))
@@ -53,14 +53,16 @@
 
 (define-application-frame vh (esa-frame-mixin standard-application-frame)
   ((mode :initform *edit-mode*
-         :accessor mode))
+         :accessor mode)
+   (views :initform nil :accessor views))
   (:menu-bar t)
   (:panes
    (window
     (let* ((*esa-instance* *application-frame*)
            (vh-pane (make-pane 'vh-pane :active t))
            (info-pane (make-pane 'vh-info-pane :master-pane vh-pane)))
-      (setf (windows *application-frame*) (list vh-pane))
+      (setf (windows *application-frame*) (list vh-pane)
+            (views *application-frame*) (view vh-pane))
       (vertically ()
         (scrolling () vh-pane )
         info-pane)))
@@ -75,6 +77,9 @@
          ;;interactor
          )))
   (:top-level (esa-top-level)))
+
+(defmethod buffers ((vh vh))
+  (mapcar #'buffer (views vh)))
 
 (defun change-to-input-mode (vh)
   (setf (mode vh) *input-mode*))

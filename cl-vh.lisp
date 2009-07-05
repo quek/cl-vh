@@ -36,7 +36,7 @@
     :inherit-from (global-esa-table movement-table esa-io:esa-io-table))
 
 (define-command-table ex-command-table
-    :inherit-from (slef-insert-table))
+    :inherit-from (self-insert-table))
 
 (defclass vh-mode ()
   ((command-table :initarg :command-table :accessor command-table)))
@@ -97,11 +97,17 @@
 (defun change-to-command-mode (vh)
   (setf (mode vh) *command-mode*))
 
+(defun change-to-ex-mode (vh)
+  (setf (mode vh) *ex-mode*))
+
 (defun insert-mode-p (vh)
   (eq (mode vh) *insert-mode*))
 
 (defun command-mode-p (vh)
   (eq (mode vh) *command-mode*))
+
+(defun ex-mode-p (vh)
+  (eq (mode vh) *ex-mode*))
 
 (defmethod find-applicable-command-table ((vh vh))
   (command-table (mode vh)))
@@ -167,7 +173,17 @@
 	 'movement-table
 	 '((#\t)))
 
-(set-key 'com-extended-command 'global-esa-table '((#\:)))
+
+
+(define-command (|COM-:| :command-table command-mode-command-table :name t) ()
+  "ex mode"
+  (change-to-ex-mode *application-frame*)
+  (unwind-protect
+       (let ((input (accept 'string :prompt "" :prompt-mode :raw)))
+         (break "~s" input))
+    (change-to-command-mode *application-frame*)))
+
+(set-key '|COM-:| 'command-mode-command-table '((#\:)))
 
 (defun vh ()
   (run-frame-top-level (make-instance 'vh)))

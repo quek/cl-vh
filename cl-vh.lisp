@@ -35,8 +35,7 @@
 (define-command-table command-mode-command-table
     :inherit-from (global-esa-table movement-table esa-io:esa-io-table))
 
-(define-command-table ex-command-table
-    :inherit-from (self-insert-table))
+(define-command-table ex-mode-command-table)
 
 (defclass vh-mode ()
   ((command-table :initarg :command-table :accessor command-table)))
@@ -53,7 +52,8 @@
 
 (defclass ex-mode (vh-mode)
   ()
-  (:default-initargs :command-table (find-command-table 'ex-command-table)))
+  (:default-initargs
+      :command-table (find-command-table 'ex-mode-command-table)))
 
 (defvar *insert-mode* (make-instance 'insert-mode))
 
@@ -86,7 +86,7 @@
          minibuffer
          ;;interactor
          )))
-  (:top-level (esa-top-level)))
+  (:top-level (esa-top-level :prompt ":")))
 
 (defmethod buffers ((vh vh))
   (mapcar #'buffer (views vh)))
@@ -133,9 +133,6 @@
 (define-command (com-command-mode :command-table insert-mode-command-table) ()
   (change-to-command-mode *application-frame*))
 
-(define-command (com-quit :name t :command-table command-mode-command-table) ()
-  (frame-exit *application-frame*))
-
 (define-command (com-insert :command-table command-mode-command-table) ()
   (change-to-insert-mode *application-frame*))
 
@@ -144,6 +141,15 @@
   (ignore-errors
     (execute-frame-command *application-frame*
                            `(drei-commands::com-forward-object 1))))
+
+
+(define-command (com-edit :command-table ex-mode-command-table :name t)
+    ((pathname 'pathname))
+  (print pathname))
+
+(define-command (com-quit :command-table ex-mode-command-table :name t) ()
+  (frame-exit *application-frame*))
+
 
 (set-key `(com-command-mode ,*numeric-argument-marker*)
          'insert-mode-command-table
@@ -158,32 +164,46 @@
          '((#\a)))
 
 (set-key `(drei-commands::com-forward-object ,*numeric-argument-marker*)
-	 'movement-table
+	 'command-mode-command-table
 	 '((#\n)))
 
 (set-key `(drei-commands::com-backward-object ,*numeric-argument-marker*)
-	 'movement-table
+	 'command-mode-command-table
 	 '((#\d)))
 
 (set-key `(drei-commands::com-forward-line ,*numeric-argument-marker*)
-	 'movement-table
+	 'command-mode-command-table
 	 '((#\h)))
 
 (set-key `(drei-commands::com-backward-line ,*numeric-argument-marker*)
-	 'movement-table
+	 'command-mode-command-table
 	 '((#\t)))
 
 
 
-(define-command (|COM-:| :command-table command-mode-command-table :name t) ()
+(define-command (|com-:| :command-table command-mode-command-table :name t) ()
   "ex mode"
-  (change-to-ex-mode *application-frame*)
-  (unwind-protect
-       (let ((input (accept 'string :prompt "" :prompt-mode :raw)))
-         (break "~s" input))
-    (change-to-command-mode *application-frame*)))
+  (let ((item (handler-case
+                  (accept
+                   `(command :command-table
+                             ,(find-command-table 'ex-mode-command-table))
+                   ;; this gets erased immediately anyway
+                   :prompt "" :prompt-mode :raw)
+                ((or command-not-accessible command-not-present) ()
+                  (beep)
+                 (display-message "No such command")
+                 (return-from |com-:| nil)))))
+    (execute-frame-command *application-frame* item)))
 
-(set-key '|COM-:| 'command-mode-command-table '((#\:)))
+;;  (change-to-ex-mode *application-frame*) ; ← でどうしてうまくいかないんだろう？
+;;  (print (command-table *application-frame*))
+;;  (unwind-protect
+;;       ;; accept が command-mode-commant-table で実行されてしまい h とか入力できない。
+;;       (let ((input (accept 'string :prompt ":" :prompt-mode :raw)))
+;;         (print input))
+;;    (change-to-command-mode *application-frame*)))
+
+(set-key '|com-:| 'command-mode-command-table '((#\:)))
 
 (defun vh ()
   (run-frame-top-level (make-instance 'vh)))

@@ -72,7 +72,7 @@
            (vh-pane (make-pane 'vh-pane :active t))
            (info-pane (make-pane 'vh-info-pane :master-pane vh-pane)))
       (setf (windows *application-frame*) (list vh-pane)
-            (views *application-frame*) (view vh-pane))
+            (views *application-frame*) (list (view vh-pane)))
       (vertically ()
         (scrolling () vh-pane )
         info-pane)))
@@ -87,6 +87,23 @@
          ;;interactor
          )))
   (:top-level (esa-top-level :prompt ":")))
+
+(defun input-from-stream (stream buffer offset)
+  (let* ((seq (make-string (file-length stream)))
+         (count (read-sequence seq stream)))
+    (insert-buffer-sequence buffer offset
+                            (if (= count (length seq))
+                                seq
+                                (subseq seq 0 count)))))
+
+(defmethod frame-make-buffer-from-stream ((vh vh) stream)
+  (let ((buffer (make-new-buffer)))
+    (input-from-stream stream buffer 0)
+    (clear-undo-history buffer)
+    buffer))
+
+(defmethod frame-make-new-buffer ((vh vh) &key (name "*scratch*"))
+  (make-instance 'vh-buffer :name name))
 
 (defmethod buffers ((vh vh))
   (mapcar #'buffer (views vh)))
@@ -144,8 +161,10 @@
 
 
 (define-command (com-edit :command-table ex-mode-command-table :name t)
-    ((pathname 'pathname))
-  (print pathname))
+    ((filepath 'pathname))
+  (handler-case (find-file filepath)
+    (file-error (e)
+      (display-message "~A" e))))
 
 (define-command (com-quit :command-table ex-mode-command-table :name t) ()
   (frame-exit *application-frame*))
@@ -205,8 +224,11 @@
 
 (set-key '|com-:| 'command-mode-command-table '((#\:)))
 
+(defvar *vh*)
 (defun vh ()
-  (run-frame-top-level (make-instance 'vh)))
+  (setf *vh* (make-instance 'vh))
+  (run-frame-top-level *vh*))
+
 
 #+nil
 (vh)

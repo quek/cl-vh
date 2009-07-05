@@ -29,30 +29,40 @@
   ())
 
 
-(define-command-table input-command-table
+(define-command-table insert-mode-command-table
     :inherit-from (self-insert-table))
 
-(define-command-table edit-command-table
+(define-command-table command-mode-command-table
     :inherit-from (global-esa-table movement-table esa-io:esa-io-table))
+
+(define-command-table ex-command-table
+    :inherit-from (slef-insert-table))
 
 (defclass vh-mode ()
   ((command-table :initarg :command-table :accessor command-table)))
 
-(defclass vh-input-mode (vh-mode)
+(defclass insert-mode (vh-mode)
   ()
-  (:default-initargs :command-table (find-command-table 'input-command-table)))
+  (:default-initargs
+      :command-table (find-command-table 'insert-mode-command-table)))
 
-(defclass vh-edit-mode (vh-mode)
+(defclass command-mode (vh-mode)
   ()
-  (:default-initargs :command-table (find-command-table 'edit-command-table)))
+  (:default-initargs
+      :command-table (find-command-table 'command-mode-command-table)))
 
-(defvar *input-mode* (make-instance 'vh-input-mode))
+(defclass ex-mode (vh-mode)
+  ()
+  (:default-initargs :command-table (find-command-table 'ex-command-table)))
 
-(defvar *edit-mode* (make-instance 'vh-edit-mode))
+(defvar *insert-mode* (make-instance 'insert-mode))
 
+(defvar *command-mode* (make-instance 'command-mode))
+
+(defvar *ex-mode* (make-instance 'ex-mode))
 
 (define-application-frame vh (esa-frame-mixin standard-application-frame)
-  ((mode :initform *edit-mode*
+  ((mode :initform *command-mode*
          :accessor mode)
    (views :initform nil :accessor views))
   (:menu-bar t)
@@ -81,17 +91,17 @@
 (defmethod buffers ((vh vh))
   (mapcar #'buffer (views vh)))
 
-(defun change-to-input-mode (vh)
-  (setf (mode vh) *input-mode*))
+(defun change-to-insert-mode (vh)
+  (setf (mode vh) *insert-mode*))
 
-(defun change-to-edit-mode (vh)
-  (setf (mode vh) *edit-mode*))
+(defun change-to-command-mode (vh)
+  (setf (mode vh) *command-mode*))
 
-(defun input-mode-p (vh)
-  (eq (mode vh) *input-mode*))
+(defun insert-mode-p (vh)
+  (eq (mode vh) *insert-mode*))
 
-(defun edit-mode-p (vh)
-  (eq (mode vh) *edit-mode*))
+(defun command-mode-p (vh)
+  (eq (mode vh) *command-mode*))
 
 (defmethod find-applicable-command-table ((vh vh))
   (command-table (mode vh)))
@@ -107,38 +117,38 @@
 
 (defmethod command-for-unbound-gestures ((frame vh) gestures)
   "for self insert"
-  (if (input-mode-p frame)
+  (if (insert-mode-p frame)
       (command-for-unbound-gestures (esa-current-window frame) gestures)))
 
 (set-key `(drei-commands::com-self-insert ,*numeric-argument-marker*)
-         'self-insert-table
+         'insert-mode-command-table
 	 '((#\Newline)))
 
-(define-command (com-edit-mode :command-table input-command-table) ()
-  (change-to-edit-mode *application-frame*))
+(define-command (com-command-mode :command-table insert-mode-command-table) ()
+  (change-to-command-mode *application-frame*))
 
-(define-command (com-quit :name t :command-table edit-command-table) ()
+(define-command (com-quit :name t :command-table command-mode-command-table) ()
   (frame-exit *application-frame*))
 
-(define-command (com-insert :command-table edit-command-table) ()
-  (change-to-input-mode *application-frame*))
+(define-command (com-insert :command-table command-mode-command-table) ()
+  (change-to-insert-mode *application-frame*))
 
-(define-command (com-append :command-table edit-command-table) ()
-  (change-to-input-mode *application-frame*)
+(define-command (com-append :command-table command-mode-command-table) ()
+  (change-to-insert-mode *application-frame*)
   (ignore-errors
     (execute-frame-command *application-frame*
                            `(drei-commands::com-forward-object 1))))
 
-(set-key `(com-edit-mode ,*numeric-argument-marker*)
-         'input-command-table
+(set-key `(com-command-mode ,*numeric-argument-marker*)
+         'insert-mode-command-table
          '((:escape)))
 
 (set-key `(com-insert ,*numeric-argument-marker*)
-	 'edit-command-table
+	 'command-mode-command-table
 	 '((#\i)))
 
 (set-key `(com-append ,*numeric-argument-marker*)
-         'edit-command-table
+         'command-mode-command-table
          '((#\a)))
 
 (set-key `(drei-commands::com-forward-object ,*numeric-argument-marker*)

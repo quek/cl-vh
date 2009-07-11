@@ -6,5 +6,6 @@
                (:file "cl-vh"))
   :depends-on (:mcclim-uim
                :mcclim-freetype
-               :anaphora))
+               :anaphora
+               :cl-fad))
 

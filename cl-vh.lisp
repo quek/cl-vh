@@ -96,6 +96,58 @@
                                 seq
                                 (subseq seq 0 count)))))
 
+
+
+(defmethod frame-find-file ((vh vh) filepath)
+  (find-file-impl vh filepath nil))
+
+(defun find-file-impl (vh filepath &optional readonlyp)
+  (cond ((null filepath)
+	 (display-message "No file name given.")
+	 (beep))
+	((fad:directory-pathname-p filepath)
+	 (display-message "~A is a directory name." filepath)
+	 (beep))
+        (t
+         (let* ((newp (not (probe-file filepath)))
+                (buffer (if (and newp (not readonlyp))
+                            (make-new-buffer)
+                            (with-open-file (stream filepath :direction :input)
+                              (make-buffer-from-stream stream))))
+
+
+                (view (make-instance 'textual-drei-syntax-view
+                       :name (file-namestring filepath)
+                       :buffer buffer)))
+           (push view (views vh))
+
+
+           (setf (offset (point buffer)) (offset (point view))
+                 (syntax view) (make-syntax-for-view view (syntax-class-name-for-filepath filepath))
+                 (file-write-time buffer) (if newp (get-universal-time) (file-write-date filepath))
+                 (needs-saving buffer) nil
+                 (name buffer) (file-namestring filepath))
+           (setf (current-view (current-window)) view)
+           ;;(evaluate-attribute-line view) ??
+           (setf (filepath buffer) (pathname filepath)
+                 (read-only-p buffer) readonlyp)
+           (beginning-of-buffer (point view))
+           buffer))))
+
+(defun syntax-class-name-for-filepath (filepath)
+  (let ((syntax-description
+         (find (or (pathname-type filepath)
+                   (pathname-name filepath))
+               drei-syntax::*syntaxes*
+               :test (lambda (x y)
+                       (member x y :test #'string-equal))
+               :key #'drei-syntax::syntax-description-pathname-types)))
+    (if syntax-description
+        (drei-syntax::syntax-description-class-name
+         syntax-description)
+        drei-syntax:*default-syntax*)))
+
+
 (defmethod frame-make-buffer-from-stream ((vh vh) stream)
   (let ((buffer (make-new-buffer)))
     (input-from-stream stream buffer 0)
